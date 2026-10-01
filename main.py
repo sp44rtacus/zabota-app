@@ -20,14 +20,11 @@ templates = Jinja2Templates(directory="templates")
 # --- Инициализация стартовых данных с защитой от сбоев ---
 @app.on_event("startup")
 def startup_event():
-    # Удаляем поврежденную базу при каждом холодном старте на Render, 
-    # чтобы таблица всегда создавалась с актуальной структурой
-    # (для реальных проектов используют Alembic, но для облачного демо это идеальное решение)
-    db_path = "zabota.db"
+    # Безопасно создаем таблицы для PostgreSQL / SQLite
+    models.Base.metadata.create_all(bind=engine)
     
     db = SessionLocal()
     try:
-        # Проверяем, созданы ли таблицы
         if not db.query(models.District).first():
             districts = ["Центр", "Южный", "Восток", "Горный", "Спутник", "МЖК", "Правый берег", "ЛДО", "ПДО", "Вавилинский затон", "Сукпак", "Каа-Хем", "Другое (указать вручную)"]
             for d in districts: db.add(models.District(name=d))
@@ -42,15 +39,8 @@ def startup_event():
             db.add(models.User(full_name="Петров Петр (Житель)", phone="+71111111111", password_hash=auth.get_password_hash("11111"), role=models.UserRole.resident, status=models.UserStatus.active))
         db.commit()
     except Exception as e:
-        print(f"Ошибка инициализации БД (пересоздаем): {e}")
+        print(f"Ошибка инициализации БД: {e}")
         db.rollback()
-        # Если структура поменялась кардинально, сбрасываем файл базы
-        db.close()
-        if os.path.exists(db_path):
-            os.remove(db_path)
-        models.Base.metadata.create_all(bind=engine)
-        startup_event() # Рекурсивно заполняем заново
-        return
     finally:
         db.close()
 
