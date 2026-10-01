@@ -303,9 +303,9 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db), user:
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     
     try:
+        # Получаем все заявки из базы
         apps = db.query(models.Application).order_by(models.Application.created_at.desc()).all()
         
-        # Инициализируем все возможные ключи канбана, включая новые статусы
         kanban_data = {
             "new": [], 
             "needs_materials": [], 
@@ -317,13 +317,26 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db), user:
         }
         
         for app_obj in apps:
-            # Безопасно проверяем имя статуса
-            status_name = app_obj.status.name if hasattr(app_obj.status, 'name') else str(app_obj.status)
-            if status_name in kanban_data:
-                kanban_data[status_name].append(app_obj)
+            # Безопасно получаем статус в виде строки (работает и для Enum, и для текста)
+            st = app_obj.status
+            if hasattr(st, 'name'):
+                status_str = st.name
+            elif hasattr(st, 'value'):
+                status_str = str(st.value)
             else:
-                kanban_data["new"].append(app_obj) # На крайний случай кидаем в новые
+                status_str = str(st)
                 
+            # Распределяем по колонкам
+            if status_str in kanban_data:
+                kanban_data[status_str].append(app_obj)
+            else:
+                kanban_data["new"].append(app_obj)
+                
+        return templates.TemplateResponse("admin_dashboard.html", {"request": request, "kanban": kanban_data, "user": user})
+    
+    except Exception as e:
+        print(f"Ошибка Канбан-доски: {e}")
+        kanban_data = {"new": [], "needs_materials": [], "approved": [], "in_progress": [], "review": [], "completed": [], "rejected": []}
         return templates.TemplateResponse("admin_dashboard.html", {"request": request, "kanban": kanban_data, "user": user})
     
     except Exception as e:
