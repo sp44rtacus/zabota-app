@@ -302,26 +302,29 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db), user:
     if not user or user.role.name not in ['inspector', 'director']: 
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     
-    # Считаем общее количество заявок в базе напрямую
-    total_apps_count = db.query(models.Application).count()
-    all_apps = db.query(models.Application).all()
-    
-    print(мэп := [f"ID: {a.id}, Status: {a.status}, UIN: {a.uin}" for a in all_apps])
+    try:
+        total_apps_count = db.query(models.Application).count()
+        all_apps = db.query(models.Application).all()
 
-    kanban_data = {"new": [], "needs_materials": [], "approved": [], "in_progress": [], "review": [], "completed": [], "rejected": []}
-    
-    for app_obj in all_apps:
-        st = app_obj.status
-        status_str = st.name if hasattr(st, 'name') else str(st.value if hasattr(st, 'value') else st)
-        if status_str in kanban_data:
-            kanban_data[status_str].append(app_obj)
-        else:
-            kanban_data["new"].append(app_obj)
-            
-    # Передаем счетчик в шаблон для проверки
-    return templates.TemplateResponse("admin_dashboard.html", {
-        "request": request, "kanban": kanban_data, "user": user, "total_apps_count": total_apps_count
-    })
+        kanban_data = {"new": [], "needs_materials": [], "approved": [], "in_progress": [], "review": [], "completed": [], "rejected": []}
+        
+        for app_obj in all_apps:
+            st = app_obj.status
+            status_str = st.name if hasattr(st, 'name') else str(st.value if hasattr(st, 'value') else st)
+            if status_str in kanban_data:
+                kanban_data[status_str].append(app_obj)
+            else:
+                kanban_data["new"].append(app_obj)
+                
+        return templates.TemplateResponse("admin_dashboard.html", {
+            "request": request, "kanban": kanban_data, "user": user, "total_apps_count": total_apps_count
+        })
+    except Exception as e:
+        print(f"Ошибка Канбан-доски: {e}")
+        kanban_data = {"new": [], "needs_materials": [], "approved": [], "in_progress": [], "review": [], "completed": [], "rejected": []}
+        return templates.TemplateResponse("admin_dashboard.html", {
+            "request": request, "kanban": kanban_data, "user": user, "total_apps_count": 0
+        })
 
 # НОВОЕ: Страница чата для жителя (Вставь прямо сюда)
 @app.get("/resident/chat/{app_id}")
