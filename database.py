@@ -1,18 +1,24 @@
+import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-# Используем SQLite для локальной разработки (как указано в ТЗ)
-SQLALCHEMY_DATABASE_URL = "sqlite:///./zabota.db"
+# Получаем ссылку на базу из переменных окружения (Render сам её подставит)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# connect_args={"check_same_thread": False} нужен только для SQLite в FastAPI
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+if DATABASE_URL:
+    # Исправление для Render (иногда они передают префикс postgres://, а SQLAlchemy нужен postgresql://)
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    engine = create_engine(DATABASE_URL)
+else:
+    # Локально на компьютере используем SQLite
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./zabota.db"
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 Base = declarative_base()
 
-# Зависимость (Dependency) для получения сессии БД в маршрутах
 def get_db():
     db = SessionLocal()
     try:
