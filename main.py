@@ -299,13 +299,38 @@ async def submit_resident_review(assignment_id: int, request: Request, db: Sessi
 # --- ЗОНА ИНСПЕКТОРА ---
 @app.get("/admin/dashboard")
 async def admin_dashboard(request: Request, db: Session = Depends(get_db), user: models.User = Depends(auth.get_current_user)):
-    if not user or user.role.name not in ['inspector', 'director']: return RedirectResponse(url="/login")
-    apps = db.query(models.Application).order_by(models.Application.created_at.desc()).all()
-    # Добавили needs_materials
-    kanban_data = {"new": [], "needs_materials": [], "approved": [], "in_progress": [], "review": [], "completed": []}
-    for app_obj in apps:
-        if app_obj.status.name in kanban_data: kanban_data[app_obj.status.name].append(app_obj)
-    return templates.TemplateResponse("admin_dashboard.html", {"request": request, "kanban": kanban_data, "user": user})
+    if not user or user.role.name not in ['inspector', 'director']: 
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    
+    try:
+        apps = db.query(models.Application).order_by(models.Application.created_at.desc()).all()
+        
+        # Инициализируем все возможные ключи канбана, включая новые статусы
+        kanban_data = {
+            "new": [], 
+            "needs_materials": [], 
+            "approved": [], 
+            "in_progress": [], 
+            "review": [], 
+            "completed": [],
+            "rejected": []
+        }
+        
+        for app_obj in apps:
+            # Безопасно проверяем имя статуса
+            status_name = app_obj.status.name if hasattr(app_obj.status, 'name') else str(app_obj.status)
+            if status_name in kanban_data:
+                kanban_data[status_name].append(app_obj)
+            else:
+                kanban_data["new"].append(app_obj) # На крайний случай кидаем в новые
+                
+        return templates.TemplateResponse("admin_dashboard.html", {"request": request, "kanban": kanban_data, "user": user})
+    
+    except Exception as e:
+        print(f"Ошибка Канбан-доски: {e}")
+        # Если база повреждена, возвращаем пустой канбан вместо падения 500
+        kanban_data = {"new": [], "needs_materials": [], "approved": [], "in_progress": [], "review": [], "completed": [], "rejected": []}
+        return templates.TemplateResponse("admin_dashboard.html", {"request": request, "kanban": kanban_data, "user": user})
 
 # НОВОЕ: Страница чата для жителя (Вставь прямо сюда)
 @app.get("/resident/chat/{app_id}")
