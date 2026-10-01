@@ -17,23 +17,42 @@ app = FastAPI(title="АИС Забота", version="1.0.0")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+# --- Инициализация стартовых данных с защитой от сбоев ---
 @app.on_event("startup")
 def startup_event():
+    # Удаляем поврежденную базу при каждом холодном старте на Render, 
+    # чтобы таблица всегда создавалась с актуальной структурой
+    # (для реальных проектов используют Alembic, но для облачного демо это идеальное решение)
+    db_path = "zabota.db"
+    
     db = SessionLocal()
-    if not db.query(models.District).first():
-        districts = ["Центр", "Южный", "Восток", "Горный", "Спутник", "МЖК", "Правый берег", "ЛДО", "ПДО", "Вавилинский затон", "Сукпак", "Каа-Хем", "Другое (указать вручную)"]
-        for d in districts: db.add(models.District(name=d))
-            
-    if not db.query(models.Category).first():
-        categories = [("Уборка снега / двора", "snowflake"), ("Доставка продуктов / лекарств", "basket"), ("Мелкий бытовой ремонт", "wrench"), ("Колка дров / Переноска угля", "fire"), ("Сопровождение в больницу", "truck-medical"), ("Помощь с документами", "file-signature"), ("Социальное общение", "mug-hot"), ("Другое (описать)", "circle-question")]
-        for title, icon in categories: db.add(models.Category(title=title, icon=icon))
-            
-    if not db.query(models.User).filter(models.User.phone == "+79991234567").first():
-        db.add(models.User(full_name="Иванов Иван (Волонтер)", phone="+79991234567", password_hash=auth.get_password_hash("12345"), role=models.UserRole.volunteer, district_id=1, status=models.UserStatus.active))
-        db.add(models.User(full_name="Смирнова Анна (Инспектор)", phone="+70000000000", password_hash=auth.get_password_hash("admin"), role=models.UserRole.inspector, status=models.UserStatus.active))
-        db.add(models.User(full_name="Петров Петр (Житель)", phone="+71111111111", password_hash=auth.get_password_hash("11111"), role=models.UserRole.resident, status=models.UserStatus.active))
-    db.commit()
-    db.close()
+    try:
+        # Проверяем, созданы ли таблицы
+        if not db.query(models.District).first():
+            districts = ["Центр", "Южный", "Восток", "Горный", "Спутник", "МЖК", "Правый берег", "ЛДО", "ПДО", "Вавилинский затон", "Сукпак", "Каа-Хем", "Другое (указать вручную)"]
+            for d in districts: db.add(models.District(name=d))
+                
+        if not db.query(models.Category).first():
+            categories = [("Уборка снега / двора", "snowflake"), ("Доставка продуктов / лекарств", "basket"), ("Мелкий бытовой ремонт", "wrench"), ("Колка дров / Переноска угля", "fire"), ("Сопровождение в больницу", "truck-medical"), ("Помощь с документами", "file-signature"), ("Социальное общение", "mug-hot"), ("Другое (описать)", "circle-question")]
+            for title, icon in categories: db.add(models.Category(title=title, icon=icon))
+                
+        if not db.query(models.User).filter(models.User.phone == "+79991234567").first():
+            db.add(models.User(full_name="Иванов Иван (Волонтер)", phone="+79991234567", password_hash=auth.get_password_hash("12345"), role=models.UserRole.volunteer, district_id=1, status=models.UserStatus.active))
+            db.add(models.User(full_name="Смирнова Анна (Инспектор)", phone="+70000000000", password_hash=auth.get_password_hash("admin"), role=models.UserRole.inspector, status=models.UserStatus.active))
+            db.add(models.User(full_name="Петров Петр (Житель)", phone="+71111111111", password_hash=auth.get_password_hash("11111"), role=models.UserRole.resident, status=models.UserStatus.active))
+        db.commit()
+    except Exception as e:
+        print(f"Ошибка инициализации БД (пересоздаем): {e}")
+        db.rollback()
+        # Если структура поменялась кардинально, сбрасываем файл базы
+        db.close()
+        if os.path.exists(db_path):
+            os.remove(db_path)
+        models.Base.metadata.create_all(bind=engine)
+        startup_event() # Рекурсивно заполняем заново
+        return
+    finally:
+        db.close()
 
 # --- СИСТЕМА УВЕДОМЛЕНИЙ (НОВОЕ) ---
 @app.get("/api/notifications")
