@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Проверка отчета - АИС Забота{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <a href="/admin/dashboard" class="text-brand hover:underline font-medium mb-6 inline-block">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Вернуться к Канбан-доске
+    </a>
+
+    <div class="flex flex-col md:flex-row gap-8">
+        
+        <!-- Левая колонка: Информация о заявке -->
+        <div class="md:w-2/3 space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-brand">
+                <div class="flex justify-between items-start mb-4 border-b pb-4">
+                    <div>
+                        <span class="text-xs font-mono font-bold bg-gray-100 px-2 py-1 rounded">UIN: {{ app.uin }}</span>
+                        <h2 class="text-2xl font-bold text-gray-800 mt-2">{{ app.category.title }}</h2>
+                    </div>
+                    <span class="bg-yellow-100 text-yellow-700 font-bold px-3 py-1 rounded-full text-sm shadow-sm">Ожидает проверки</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Заявитель</p>
+                        <p class="font-medium text-gray-800"><i class="fa-solid fa-user text-brand mr-1"></i> {{ app.applicant_name }}</p>
+                        <p class="text-gray-600 text-sm mt-1"><i class="fa-solid fa-phone mr-1"></i> {{ app.phone }}</p>
+                        <p class="text-gray-600 text-sm mt-1"><i class="fa-solid fa-id-card mr-1"></i> {{ app.benefit_category }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Адрес</p>
+                        <p class="text-gray-800"><i class="fa-solid fa-location-dot text-brand mr-1"></i> <b>{{ app.district.name }}</b></p>
+                        <p class="text-gray-600 text-sm mt-1">{{ app.address }}</p>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-2">Описание проблемы</p>
+                    <p class="text-gray-800">{{ app.description }}</p>
+                </div>
+
+                {% if app.audio_url %}
+                <div class="mt-4">
+                    <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-2"><i class="fa-solid fa-microphone text-brand mr-1"></i> Голосовое сообщение</p>
+                    <audio controls src="{{ app.audio_url }}" class="w-full h-10"></audio>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Правая колонка: Отчет Волонтера -->
+        <div class="md:w-1/3 space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2"><i class="fa-solid fa-clipboard-user text-brand mr-2"></i>Отчет волонтера</h3>
+                
+                <div class="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 text-brand flex items-center justify-center font-bold">{{ assignment.volunteer.full_name[0] }}</div>
+                    <div>
+                        <p class="font-bold text-gray-800 text-sm">{{ assignment.volunteer.full_name }}</p>
+                        <p class="text-xs text-gray-500"><i class="fa-solid fa-phone mr-1"></i>{{ assignment.volunteer.phone }}</p>
+                    </div>
+                </div>
+
+                {% if assignment.volunteer_comment %}
+                <div class="bg-gray-100 p-3 rounded text-sm text-gray-700 italic mb-4">
+                    "{{ assignment.volunteer_comment }}"
+                </div>
+                {% endif %}
+
+                <!-- СКРЫТАЯ ОЦЕНКА ЖИТЕЛЯ -->
+                {% if assignment.resident_behavior_rating %}
+                <div class="{% if assignment.resident_behavior_rating <= 3 %} bg-red-50 border-red-200 text-red-800 {% else %} bg-green-50 border-green-200 text-green-800 {% endif %} p-3 border rounded mb-4 text-xs">
+                    <p class="font-bold mb-1"><i class="fa-solid fa-eye-slash mr-1"></i> Скрытая оценка жителя:</p>
+                    <p>Оценка: <b>{{ assignment.resident_behavior_rating }} / 5</b></p>
+                    {% if assignment.resident_behavior_rating <= 2 %}
+                    <p class="mt-1 font-bold animate-pulse"><i class="fa-solid fa-triangle-exclamation"></i> Внимание! Волонтер сообщил о проблемах.</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="space-y-4 mb-6">
+                    {% if assignment.photo_before_url %}
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold mb-1">Фото "ДО"</p>
+                        <a href="{{ assignment.photo_before_url }}" target="_blank" class="block overflow-hidden rounded border hover:opacity-80 transition">
+                            <img src="{{ assignment.photo_before_url }}" alt="До" class="w-full h-32 object-cover">
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold mb-1 text-success">Фото "ПОСЛЕ" *</p>
+                        <a href="{{ assignment.photo_after_url }}" target="_blank" class="block overflow-hidden rounded border-2 border-success hover:opacity-80 transition">
+                            <img src="{{ assignment.photo_after_url }}" alt="После" class="w-full h-40 object-cover">
+                        </a>
+                    </div>
+                </div>
+
+                <div class="space-y-3 pt-4 border-t">
+                    <button onclick="verifyReport('approve')" class="w-full bg-success hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded shadow transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-check"></i> Утвердить отчет
+                    </button>
+                    <button onclick="verifyReport('reject')" class="w-full bg-red-100 hover:bg-red-200 text-danger border border-red-200 font-bold py-3 px-4 rounded shadow-sm transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate-left"></i> На доработку
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function verifyReport(action) {
+        let reason = "";
+        
+        if(action === 'reject') {
+            reason = prompt("Опишите, что именно волонтер должен переделать (это сообщение появится у него в чате):");
+            if(reason === null || reason.trim() === "") return;
+        } else {
+            if(!confirm("Утвердить выполнение и начислить часы волонтеру?")) return;
+        }
+        
+        try {
+            const response = await fetch(`/admin/api/verify/{{ app.id }}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: action, reason: reason })
+            });
+            
+            const result = await response.json();
+            if(result.status === 'success') {
+                window.location.href = "/admin/dashboard";
+            } else {
+                alert('Ошибка: ' + result.message);
+            }
+        } catch (err) {
+            alert('Ошибка соединения с сервером.');
+        }
+    }
+</script>
+{% endblock %}

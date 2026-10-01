@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}АИС Забота - Главная{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-12 pb-10">
+    
+    <!-- Hero Секция -->
+    <div class="bg-brand rounded-3xl p-8 md:p-12 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center gap-8 mt-4">
+        <!-- Декоративные круги -->
+        <div class="absolute -top-20 -right-20 w-64 h-64 bg-white opacity-5 rounded-full blur-2xl"></div>
+        <div class="absolute bottom-0 left-10 w-40 h-40 bg-blue-400 opacity-20 rounded-full blur-xl"></div>
+        
+        <div class="flex-1 relative z-10 text-center md:text-left">
+            <span class="bg-blue-800 text-blue-200 text-xs font-bold px-3 py-1 rounded-full tracking-wider uppercase">Муниципальный портал</span>
+            <h1 class="text-4xl md:text-5xl font-bold mt-4 mb-4 leading-tight">Вам нужна помощь? <br><span class="text-yellow-300">Мы рядом.</span></h1>
+            <p class="text-blue-100 text-lg mb-8 max-w-lg mx-auto md:mx-0">Единый центр социальной и адресной поддержки жителей города Кызыла силами добровольцев.</p>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+                <a href="/request/new" class="bg-success hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition transform hover:-translate-y-1 flex items-center justify-center gap-2 text-lg">
+                    <i class="fa-solid fa-hand-holding-heart"></i> Попросить помощь
+                </a>
+                {% if not user %}
+                <a href="/register" class="bg-white hover:bg-gray-100 text-brand font-bold py-3 px-8 rounded-xl shadow-lg transition transform hover:-translate-y-1 flex items-center justify-center gap-2 text-lg border border-gray-200">
+                    <i class="fa-solid fa-user-group"></i> Стать волонтером
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Блок статистики -->
+        <div class="flex-1 w-full relative z-10 flex flex-col gap-4">
+            <div class="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl flex items-center gap-4">
+                <div class="w-14 h-14 bg-emerald-400/20 text-emerald-300 rounded-xl flex items-center justify-center text-2xl"><i class="fa-solid fa-check-double"></i></div>
+                <div>
+                    <h3 class="text-3xl font-bold">{{ stats.completed }}</h3>
+                    <p class="text-blue-200 text-sm">Заявок успешно выполнено</p>
+                </div>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl flex items-center gap-4">
+                <div class="w-14 h-14 bg-yellow-400/20 text-yellow-300 rounded-xl flex items-center justify-center text-2xl"><i class="fa-solid fa-users"></i></div>
+                <div>
+                    <h3 class="text-3xl font-bold">{{ stats.volunteers }}</h3>
+                    <p class="text-blue-200 text-sm">Активных волонтеров в городе</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- БАНК ПОТРЕБНОСТЕЙ -->
+    {% if materials_apps %}
+    <div class="mb-12">
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-bold text-gray-800"><i class="fa-solid fa-hand-holding-dollar text-indigo-500 mr-2"></i>Банк потребностей</h2>
+            <p class="text-gray-500 mt-2">Этим заявкам не хватает строительных или бытовых материалов. Вы можете помочь!</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for app in materials_apps %}
+            <div class="bg-indigo-50 border border-indigo-100 p-6 rounded-2xl shadow-sm flex flex-col justify-between">
+                <div>
+                    <span class="bg-indigo-200 text-indigo-800 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Открыт сбор</span>
+                    <h3 class="font-bold text-xl mt-2 text-gray-800">{{ app.category.title }}</h3>
+                    <p class="text-sm text-gray-600 mt-2 line-clamp-3">{{ app.description }}</p>
+                </div>
+                <div class="mt-4 pt-4 border-t border-indigo-100 flex items-center justify-between">
+                    <p class="text-xs text-indigo-700"><i class="fa-solid fa-location-dot mr-1"></i> {{ app.district.name }}</p>
+                    <button onclick="alert('Свяжитесь с Департаментом: +7 (39422) 2-00-00')" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow hover:bg-indigo-700 transition">Помочь материалами</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ДОСКА ПОЧЕТА (Wall of Fame) -->
+    <div>
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-bold text-gray-800"><i class="fa-solid fa-trophy text-yellow-500 mr-2"></i>Доска почета Кызыла</h2>
+            <p class="text-gray-500 mt-2">Лучшие волонтеры по итогам отработанных часов и отзывам жителей</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for vol in top_volunteers %}
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 flex flex-col items-center text-center relative overflow-hidden transition hover:shadow-md">
+                
+                <!-- Медали для ТОП-3 -->
+                {% if loop.index == 1 %}
+                <div class="absolute top-0 right-0 bg-yellow-400 text-white font-bold px-4 py-1 rounded-bl-xl shadow"><i class="fa-solid fa-crown mr-1"></i> 1 место</div>
+                {% elif loop.index == 2 %}
+                <div class="absolute top-0 right-0 bg-gray-300 text-gray-800 font-bold px-4 py-1 rounded-bl-xl shadow">2 место</div>
+                {% elif loop.index == 3 %}
+                <div class="absolute top-0 right-0 bg-amber-600 text-white font-bold px-4 py-1 rounded-bl-xl shadow">3 место</div>
+                {% endif %}
+
+                <div class="w-20 h-20 bg-blue-100 text-brand rounded-full flex items-center justify-center text-3xl font-bold mb-4 shadow-inner">
+                    {{ vol.full_name[0] }}
+                </div>
+                <h3 class="font-bold text-lg text-gray-800">{{ vol.full_name }}</h3>
+                <p class="text-xs text-gray-500 mb-4"><i class="fa-solid fa-map-location-dot mr-1"></i> Район: {{ vol.district.name if vol.district else 'Не указан' }}</p>
+                
+                <div class="flex gap-4 w-full bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <div class="flex-1 border-r border-gray-200">
+                        <p class="text-xs text-gray-500 mb-1">Часы</p>
+                        <p class="font-bold text-brand"><i class="fa-solid fa-clock text-blue-300 mr-1"></i> {{ vol.volunteer_hours }} ч.</p>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs text-gray-500 mb-1">Рейтинг</p>
+                        <p class="font-bold text-yellow-500"><i class="fa-solid fa-star mr-1"></i> {{ vol.rating }}</p>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-span-full text-center py-10 bg-white rounded-2xl border border-gray-200">
+                <i class="fa-solid fa-medal text-6xl text-gray-200 mb-3"></i>
+                <h3 class="text-gray-500">Рейтинг формируется... Станьте первым!</h3>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

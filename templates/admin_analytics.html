@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Аналитика - АИС Забота{% endblock %}
+
+{% block head %}
+<!-- Подключаем стили для карты Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #map { height: 400px; border-radius: 0.5rem; z-index: 10; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800"><i class="fa-solid fa-chart-pie text-brand mr-2"></i>Сводная аналитика</h2>
+            <p class="text-gray-600">Единый портал помощи "Забота" г. Кызыл</p>
+        </div>
+        <a href="/admin/dashboard" class="bg-gray-200 text-gray-800 px-4 py-2 rounded shadow hover:bg-gray-300 transition font-medium">
+            <i class="fa-solid fa-clipboard-list mr-1"></i> Назад к Канбану
+        </a>
+    </div>
+
+    <!-- Верхние виджеты -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-blue-500">
+            <p class="text-sm text-gray-500 uppercase font-bold">Всего заявок</p>
+            <p class="text-4xl font-bold text-gray-800 mt-2">{{ total_apps }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-success">
+            <p class="text-sm text-gray-500 uppercase font-bold">Успешно выполнено</p>
+            <p class="text-4xl font-bold text-success mt-2">{{ completed_apps }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border-t-4 border-purple-500">
+            <p class="text-sm text-gray-500 uppercase font-bold">Зарегистрировано волонтеров</p>
+            <p class="text-4xl font-bold text-gray-800 mt-2">{{ total_volunteers }}</p>
+        </div>
+    </div>
+
+    <!-- Графики и Карта -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        
+        <!-- Круговая диаграмма (Категории льготников) -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 text-center">Обращения по категориям льгот</h3>
+            <div class="relative h-64 w-full flex justify-center">
+                <canvas id="benefitChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Столбчатая диаграмма (По районам) -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 text-center">Нагрузка по микрорайонам</h3>
+            <div class="relative h-64 w-full">
+                <canvas id="districtChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Тепловая карта Кызыла -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-10">
+        <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fa-solid fa-map-location-dot text-danger mr-2"></i>Карта интенсивности заявок</h3>
+        <p class="text-sm text-gray-500 mb-4">Чем больше радиус красной зоны, тем выше потребность в волонтерах в данном районе.</p>
+        <div id="map"></div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Подключаем Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Подключаем Leaflet.js -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // --- ДАННЫЕ ИЗ БЭКЕНДА (Jinja) ---
+    const districtsLabels = {{ districts_labels | tojson }};
+    const districtsData = {{ districts_data | tojson }};
+    const benefitLabels = {{ benefit_labels | tojson }};
+    const benefitData = {{ benefit_data | tojson }};
+
+    // --- 1. КРУГОВАЯ ДИАГРАММА (Категории) ---
+    const ctxBenefit = document.getElementById('benefitChart').getContext('2d');
+    new Chart(ctxBenefit, {
+        type: 'doughnut',
+        data: {
+            labels: benefitLabels,
+            datasets: [{
+                data: benefitData,
+                backgroundColor: ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#6B7280'],
+                borderWidth: 1
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // --- 2. СТОЛБЧАТАЯ ДИАГРАММА (Районы) ---
+    const ctxDistrict = document.getElementById('districtChart').getContext('2d');
+    new Chart(ctxDistrict, {
+        type: 'bar',
+        data: {
+            labels: districtsLabels,
+            datasets: [{
+                label: 'Количество заявок',
+                data: districtsData,
+                backgroundColor: '#1E3A8A',
+                borderRadius: 4
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // --- 3. КАРТА (Leaflet) ---
+    // Координаты центра Кызыла
+    const map = L.map('map').setView([51.719, 94.437], 12);
+    
+    // Подключаем слой карты OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Примерные GPS координаты районов Кызыла
+    const districtCoords = {
+        "Центр": [51.719, 94.437],
+        "Южный": [51.705, 94.435],
+        "ЛДО": [51.690, 94.400],
+        "МЖК": [51.710, 94.460],
+        "Вавилинский затон": [51.750, 94.380]
+    };
+
+    // Отрисовываем "тепловые" круги на основе количества заявок
+    districtsLabels.forEach((name, index) => {
+        const count = districtsData[index];
+        if (count > 0 && districtCoords[name]) {
+            // Радиус зависит от количества заявок (базовый 300м + по 150м за каждую заявку)
+            const radius = 300 + (count * 150); 
+            
+            L.circle(districtCoords[name], {
+                color: 'red',
+                fillColor: '#f03',
+                fillOpacity: 0.5,
+                radius: radius
+            }).addTo(map)
+            .bindPopup(`<b>${name}</b><br>Заявок: ${count}`);
+        }
+    });
+</script>
+{% endblock %}

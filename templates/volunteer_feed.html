@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Лента задач - АИС Забота{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #map { height: 500px; border-radius: 0.75rem; z-index: 10; }
+    .leaflet-popup-content-wrapper { border-radius: 0.75rem; padding: 0; overflow: hidden; }
+    .leaflet-popup-content { margin: 0; width: 250px !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if is_pending %}
+<div class="max-w-2xl mx-auto bg-yellow-50 border border-yellow-200 p-10 rounded-xl shadow-sm mt-10 text-center">
+    <i class="fa-solid fa-user-clock text-6xl text-yellow-400 mb-4"></i>
+    <h3 class="text-2xl font-bold text-yellow-800">Аккаунт на проверке</h3>
+    <p class="text-yellow-700 mt-3 text-lg">Здравствуйте, {{ user.full_name }}!</p>
+    <p class="text-yellow-700 mt-2">В целях безопасности адреса скрыты. Доступ к ленте откроется, как только инспектор Департамента проверит и одобрит ваш профиль.</p>
+</div>
+
+{% else %}
+<div class="max-w-5xl mx-auto">
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800"><i class="fa-solid fa-list-check text-success mr-2"></i>Панель задач</h2>
+            <p class="text-gray-600">Ваши текущие дела и доступные новые заявки</p>
+        </div>
+    </div>
+
+    {% if active_assignments %}
+    <div class="mb-10 bg-blue-50 p-6 rounded-xl border border-blue-200 shadow-sm">
+        <h3 class="text-xl font-bold text-brand mb-4 border-b border-blue-200 pb-2"><i class="fa-solid fa-person-digging mr-2"></i>В работе ({{ active_assignments|length }})</h3>
+        <div class="space-y-4">
+            {% for assignment in active_assignments %}
+            <div class="bg-white rounded-lg shadow-sm border-l-4 {% if assignment.status.name == 'rejected' %} border-orange-500 {% else %} border-brand {% endif %} p-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex-grow">
+                    {% if assignment.status.name == 'rejected' %}
+                    <span class="bg-orange-500 text-white text-[10px] uppercase font-bold px-2 py-1 rounded animate-pulse inline-block mb-1">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Доработка
+                    </span>
+                    {% else %}
+                    <span class="bg-brand text-white text-[10px] uppercase font-bold px-2 py-1 rounded inline-block mb-1">
+                        Выполняется
+                    </span>
+                    {% endif %}
+                    <h4 class="font-bold text-gray-800">{{ assignment.application.category.title }}</h4>
+                    <p class="text-xs text-gray-500"><i class="fa-solid fa-location-dot mr-1"></i> {{ assignment.application.address }}</p>
+                </div>
+                <a href="/volunteer/task/{{ assignment.application.id }}" class="bg-brand hover:bg-blue-800 text-white font-bold py-2 px-6 rounded shadow transition text-sm w-full md:w-auto text-center">
+                    Перейти к задаче
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="flex flex-col md:flex-row justify-between items-center mb-4 mt-8 gap-4 border-b pb-2">
+        <h3 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-inbox text-gray-400 mr-2"></i>Доступно для взятия ({{ tasks|length }})</h3>
+        
+        <div class="bg-gray-200 rounded-lg p-1 inline-flex shadow-inner">
+            <button id="btnList" class="px-6 py-1.5 rounded-md bg-white shadow-sm font-bold text-brand text-sm transition">Список</button>
+            <button id="btnMap" class="px-6 py-1.5 rounded-md text-gray-500 hover:text-gray-700 font-bold text-sm transition">На карте</button>
+        </div>
+    </div>
+
+    <!-- Карта -->
+    <div id="mapContainer" class="hidden mb-8 shadow-sm border border-gray-200 rounded-xl overflow-hidden">
+        <div id="map"></div>
+    </div>
+
+    <!-- Список -->
+    <div id="listContainer" class="space-y-4">
+        {% if tasks %}
+            {% for task in tasks %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition flex flex-col md:flex-row gap-4 items-center {% if task.is_emergency %}border-l-4 border-l-danger{% endif %}">
+                <div class="hidden md:flex w-16 h-16 rounded-full bg-blue-50 items-center justify-center text-2xl text-brand flex-shrink-0">
+                    <i class="fa-solid fa-{{ task.category.icon }}"></i>
+                </div>
+                <div class="flex-grow w-full">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-lg font-bold text-gray-800">{{ task.category.title }}</h3>
+                        {% if task.is_emergency %}
+                        <span class="bg-danger text-white text-xs font-bold px-2 py-1 rounded animate-pulse shadow">СРОЧНО SOS</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-sm text-gray-500 mt-1"><i class="fa-solid fa-location-dot mr-1"></i> Район: <b>{{ task.district.name }}</b></p>
+                    <p class="text-gray-700 mt-2 line-clamp-2 bg-gray-50 p-2 rounded text-sm border border-gray-100">"{{ task.description }}"</p>
+                </div>
+                <div class="w-full md:w-auto flex-shrink-0">
+                    <button onclick="takeTask({{ task.id }})" class="w-full md:w-auto bg-success hover:bg-emerald-600 text-white font-bold py-3 px-6 rounded-lg shadow transition">
+                        Взять задачу
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-16 bg-white rounded-xl border border-gray-200">
+                <i class="fa-solid fa-mug-hot text-6xl text-gray-300 mb-4"></i>
+                <h3 class="text-xl font-bold text-gray-600">Все задачи выполнены!</h3>
+                <p class="text-gray-500 mt-2">Вы можете немного отдохнуть, пока не появятся новые.</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    async function takeTask(appId) {
+        if(confirm("Вы уверены, что готовы взять эту задачу?")) {
+            try {
+                const response = await fetch(`/volunteer/api/task/${appId}/take`, { method: 'POST' });
+                const result = await response.json();
+                if(result.status === 'success') { window.location.href = result.redirect_url; } 
+                else { alert('Ошибка: ' + result.message); }
+            } catch (err) { alert('Сетевая ошибка.'); }
+        }
+    }
+
+    {% if not is_pending and tasks %}
+    document.addEventListener("DOMContentLoaded", () => {
+        const btnList = document.getElementById('btnList');
+        const btnMap = document.getElementById('btnMap');
+        const listContainer = document.getElementById('listContainer');
+        const mapContainer = document.getElementById('mapContainer');
+        
+        let map = null;
+
+        const availableTasks = [
+            {% for task in tasks %}
+            {
+                id: {{ task.id }},
+                title: "{{ task.category.title }}",
+                address: "{{ task.address }}",
+                district: "{{ task.district.name }}",
+                is_emergency: {{ 'true' if task.is_emergency else 'false' }},
+                icon: "{{ task.category.icon }}"
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        function initMap() {
+            if (map !== null) return; 
+            
+            const kyzylCenter = [51.7198, 94.4377];
+            map = L.map('map').setView(kyzylCenter, 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            availableTasks.forEach(task => {
+                const latOffset = (Math.random() - 0.5) * 0.04;
+                const lngOffset = (Math.random() - 0.5) * 0.08;
+                
+                const markerColor = task.is_emergency ? 'red' : 'blue';
+                const circleMarker = L.circleMarker([kyzylCenter[0] + latOffset, kyzylCenter[1] + lngOffset], {
+                    color: markerColor, fillColor: markerColor, fillOpacity: 0.8, radius: 10
+                }).addTo(map);
+
+                const popupContent = `
+                    <div class="bg-brand text-white px-3 py-2 text-sm font-bold flex justify-between items-center">
+                        <span><i class="fa-solid fa-${task.icon} mr-1"></i> ${task.title}</span>
+                        ${task.is_emergency ? '<span class="bg-danger px-1 rounded text-[10px] animate-pulse">SOS</span>' : ''}
+                    </div>
+                    <div class="p-3 bg-white text-gray-800 text-xs">
+                        <p class="mb-1"><i class="fa-solid fa-map-location-dot text-brand mr-1"></i> <b>Район:</b> ${task.district}</p>
+                        <p class="mb-3 text-gray-500">${task.address}</p>
+                        <button onclick="takeTask(${task.id})" class="w-full bg-success text-white py-1.5 rounded font-bold hover:bg-emerald-600 transition shadow-sm">
+                            Взять задачу
+                        </button>
+                    </div>
+                `;
+                circleMarker.bindPopup(popupContent);
+            });
+        }
+
+        btnMap.addEventListener('click', () => {
+            btnMap.classList.replace('text-gray-500', 'text-brand');
+            btnMap.classList.replace('hover:text-gray-700', 'bg-white');
+            btnMap.classList.add('shadow-sm');
+            
+            btnList.classList.replace('bg-white', 'hover:text-gray-700');
+            btnList.classList.replace('text-brand', 'text-gray-500');
+            btnList.classList.remove('shadow-sm');
+
+            listContainer.classList.add('hidden');
+            mapContainer.classList.remove('hidden');
+            
+            initMap();
+            setTimeout(() => map.invalidateSize(), 100); 
+        });
+
+        btnList.addEventListener('click', () => {
+            btnList.classList.replace('text-gray-500', 'text-brand');
+            btnList.classList.replace('hover:text-gray-700', 'bg-white');
+            btnList.classList.add('shadow-sm');
+            
+            btnMap.classList.replace('bg-white', 'hover:text-gray-700');
+            btnMap.classList.replace('text-brand', 'text-gray-500');
+            btnMap.classList.remove('shadow-sm');
+
+            mapContainer.classList.add('hidden');
+            listContainer.classList.remove('hidden');
+        });
+    });
+    {% endif %}
+</script>
+{% endblock %}

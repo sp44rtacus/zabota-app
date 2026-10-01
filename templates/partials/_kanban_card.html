@@ -1,0 +1,60 @@
+<!-- Карточка заявки -->
+<div id="card-{{ app.id }}" 
+     {% if app.status.name != 'new' %}
+     draggable="true" ondragstart="drag(event)" 
+     class="bg-white p-4 rounded shadow-sm border-l-4 cursor-grab active:cursor-grabbing hover:shadow-md transition {% if app.is_emergency %} border-danger {% else %} border-gray-300 {% endif %}"
+     {% else %}
+     class="bg-white p-4 rounded shadow-sm border-l-4 hover:shadow-md transition {% if app.is_emergency %} border-danger {% else %} border-gray-300 {% endif %}"
+     {% endif %}>
+    
+    <div class="flex justify-between items-start mb-2">
+        <span class="text-xs font-mono font-bold bg-gray-100 px-2 py-1 rounded text-gray-600">{{ app.uin }}</span>
+        {% if app.is_emergency %}
+        <span class="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-1 rounded animate-pulse">SOS</span>
+        {% endif %}
+    </div>
+
+    <h4 class="font-bold text-sm text-gray-800">{{ app.category.title }}</h4>
+    <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-location-dot text-gray-400 mr-1"></i>{{ app.district.name }}, {{ app.address }}</p>
+    
+    <div class="mt-3 text-xs text-gray-700 bg-gray-50 p-2 rounded line-clamp-2">
+        "{{ app.description }}"
+    </div>
+
+    <div class="mt-3 flex justify-between items-center text-xs text-gray-500 border-t pt-2">
+        <span><i class="fa-regular fa-clock mr-1"></i>{{ app.created_at.strftime('%d.%m %H:%M') }}</span>
+        
+        {% if app.audio_url %}
+        <span class="text-brand" title="Есть аудио-запись"><i class="fa-solid fa-microphone"></i></span>
+        {% endif %}
+    </div>
+
+    <!-- Кнопка проверки (появляется только в 4-й колонке) -->
+    {% if app.status.name == 'review' %}
+    <div class="mt-3">
+        <a href="/admin/verify/{{ app.id }}" class="block w-full text-center bg-purple-100 text-purple-700 font-bold py-2 rounded shadow-sm hover:bg-purple-200 transition text-sm">
+            <i class="fa-solid fa-magnifying-glass mr-1"></i> Проверить отчет
+        </a>
+    </div>
+    {% endif %}
+
+<!-- Кнопки модерации для новых заявок -->
+    {% if app.status.name == 'new' %}
+        
+        <!-- Если есть аудио, заставляем прослушать -->
+        {% if app.audio_url %}
+        <div class="mt-3 flex flex-col gap-2 border-t pt-3">
+            <div class="flex gap-2">
+                <button id="approve-btn-{{ app.id }}" onclick="moderateApp({{ app.id }}, 'approve')" class="w-1/2 bg-success text-white text-xs font-bold py-2 rounded shadow-sm hover:bg-emerald-600 transition flex items-center justify-center gap-1 {% if app.audio_url %} opacity-50 cursor-not-allowed {% endif %}" {% if app.audio_url %} disabled title="Сначала прослушайте аудио" {% endif %}>
+                    <i class="fa-solid fa-check"></i> Одобрить
+                </button>
+                <button onclick="moderateApp({{ app.id }}, 'reject')" class="w-1/2 bg-gray-100 text-danger border border-red-200 text-xs font-bold py-2 rounded shadow-sm hover:bg-red-50 transition flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-ban"></i> Отклонить
+                </button>
+            </div>
+            <!-- НОВАЯ КНОПКА -->
+            <button onclick="moderateApp({{ app.id }}, 'materials')" class="w-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold py-2 rounded shadow-sm hover:bg-indigo-100 transition flex items-center justify-center gap-1">
+                <i class="fa-solid fa-box-open"></i> Перевести в "Сбор материалов"
+            </button>
+        </div>
+    {% endif %}

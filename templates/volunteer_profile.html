@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Мой профиль - АИС Забота{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    
+    <div class="flex items-center space-x-4 mb-8">
+        <div class="w-20 h-20 bg-brand text-white rounded-full flex items-center justify-center text-3xl font-bold shadow-lg">
+            {{ volunteer.full_name[0] }}
+        </div>
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">{{ volunteer.full_name }}</h2>
+            <p class="text-gray-500">{{ volunteer.phone }} • Волонтер г. Кызыла</p>
+        </div>
+    </div>
+
+    <!-- Виджеты статистики -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
+            <div class="text-4xl font-bold text-success mb-2">{{ volunteer.volunteer_hours }}</div>
+            <div class="text-gray-600 text-sm uppercase font-semibold">Часов практики</div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
+            <div class="text-4xl font-bold text-yellow-500 mb-2">
+                {{ volunteer.rating }} <i class="fa-solid fa-star text-2xl"></i>
+            </div>
+            <div class="text-gray-600 text-sm uppercase font-semibold">Рейтинг</div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
+            <div class="text-4xl font-bold text-brand mb-2">{{ completed|length }}</div>
+            <div class="text-gray-600 text-sm uppercase font-semibold">Задач выполнено</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Левая колонка: История задач -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Дневник социальной практики</h3>
+            
+            {% if completed %}
+            <div class="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                {% for assignment in completed %}
+                <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-gray-800">{{ assignment.application.category.title }}</h4>
+                        <p class="text-xs text-gray-500 mt-1">{{ assignment.application.district.name }} • {{ assignment.application.created_at.strftime('%d.%m.%Y') }}</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="bg-success text-white text-xs font-bold px-2 py-1 rounded">+2 часа</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-500 italic text-center py-8">Вы еще не завершили ни одной задачи.</p>
+            {% endif %}
+        </div>
+
+        <!-- Правая колонка: Генерация Сертификата -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-xl font-bold text-gray-800">Награды и Справки</h3>
+                <!-- Кнопка генерации PDF -->
+                <button onclick="downloadPDF()" class="bg-brand hover:bg-blue-800 text-white px-4 py-2 rounded shadow transition text-sm font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-download"></i> Скачать PDF
+                </button>
+            </div>
+            
+            <p class="text-sm text-gray-500 mb-4">Здесь формируется официальная справка-сертификат для предоставления по месту учебы или работы.</p>
+
+            <!-- Блок, который будет конвертирован в PDF -->
+            <div id="certificate-content" class="bg-white p-8 border-4 border-double border-brand rounded-lg relative overflow-hidden flex-grow flex flex-col justify-center">
+                <!-- Декоративный фон -->
+                <i class="fa-solid fa-award text-gray-100 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[200px] z-0"></i>
+                
+                <div class="relative z-10 text-center">
+                    <h2 class="text-2xl md:text-3xl font-serif font-bold text-brand mb-2 uppercase">Справка-Сертификат</h2>
+                    <p class="text-xs text-gray-500 uppercase tracking-widest mb-6">о прохождении социальной практики</p>
+                    
+                    <p class="text-gray-700">Настоящим подтверждается, что</p>
+                    <h3 class="text-2xl font-bold text-gray-900 my-2">{{ volunteer.full_name }}</h3>
+                    
+                    <p class="text-gray-700 mb-6 leading-relaxed">
+                        является официальным волонтером проекта "Забота" г. Кызыла и успешно завершил(а) программу адресной помощи нуждающимся гражданам.
+                    </p>
+                    
+                    <div class="bg-gray-50 py-3 px-6 rounded inline-block border border-gray-200 mb-8">
+                        <span class="block text-sm text-gray-500">Подтверждено часов:</span>
+                        <span class="block text-2xl font-bold text-success">{{ volunteer.volunteer_hours }} ч.</span>
+                    </div>
+
+                    <div class="flex justify-between items-end mt-4 text-left border-t border-gray-300 pt-4">
+                        <div>
+                            <p class="text-xs text-gray-500">Директор Департамента</p>
+                            <p class="font-bold text-sm text-gray-800">Иванов И.И.</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-gray-500">Дата выдачи</p>
+                            <p class="font-bold text-sm text-gray-800" id="currentDate"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Подключаем библиотеку для конвертации HTML в PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script>
+    // Устанавливаем текущую дату в сертификат
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('ru-RU');
+
+    function downloadPDF() {
+        const element = document.getElementById('certificate-content');
+        
+        // Настройки для PDF
+        const opt = {
+            margin:       10,
+            filename:     'Справка_Волонтера_Забота.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+
+        // Генерация и скачивание
+        html2pdf().set(opt).from(element).save();
+    }
+</script>
+{% endblock %}

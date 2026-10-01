@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Регистрация - АИС Забота{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden mt-6 mb-10">
+    <div class="bg-success text-white p-6 text-center relative overflow-hidden">
+        <div class="absolute -top-10 -left-10 w-32 h-32 bg-white opacity-10 rounded-full"></div>
+        <i class="fa-solid fa-user-plus text-4xl mb-2"></i>
+        <h2 class="text-2xl font-bold">Присоединяйтесь</h2>
+        <p class="text-emerald-100 text-sm mt-1">Регистрация в муниципальной системе "Забота"</p>
+    </div>
+
+    <div class="p-8">
+        {% if error %}
+        <div class="bg-red-50 text-danger border border-red-200 p-3 rounded-lg mb-6 text-sm font-bold text-center flex items-center justify-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation text-lg"></i> {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/register" method="POST" class="space-y-5">
+            <!-- Выбор роли (стилизованный) -->
+            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <label class="block text-sm font-bold text-gray-700 mb-3">Укажите цель регистрации:</label>
+                <div class="space-y-3">
+                    <label class="flex items-center space-x-3 cursor-pointer bg-white p-3 rounded-lg border border-gray-200 shadow-sm hover:border-success transition">
+                        <input type="radio" name="role_type" value="resident" checked class="w-5 h-5 text-success focus:ring-success">
+                        <span class="font-bold text-gray-700">Мне нужна помощь (Житель)</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer bg-white p-3 rounded-lg border border-gray-200 shadow-sm hover:border-brand transition">
+                        <input type="radio" name="role_type" value="volunteer" class="w-5 h-5 text-brand focus:ring-brand">
+                        <span class="font-bold text-gray-700">Хочу помогать (Волонтер)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">ФИО полностью</label>
+                <input type="text" name="full_name" required placeholder="Например: Иванов Иван Иванович" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-success outline-none transition shadow-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Номер телефона</label>
+                <input type="tel" name="phone" required placeholder="+7 (999) 000-00-00" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-success outline-none transition shadow-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Придумайте пароль (минимум 6 символов)</label>
+                <input type="password" name="password" required minlength="6" placeholder="••••••••" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-success outline-none transition shadow-sm">
+            </div>
+
+            <button type="submit" class="w-full bg-success text-white font-bold text-lg py-3 rounded-xl shadow-lg hover:shadow-success/50 hover:-translate-y-0.5 transition-all duration-200 mt-2">
+                Создать аккаунт
+            </button>
+        </form>
+
+        <div class="mt-6 text-center text-sm text-gray-500 border-t pt-6">
+            Уже есть аккаунт? <a href="/login" class="text-success font-bold hover:underline">Войти в систему</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

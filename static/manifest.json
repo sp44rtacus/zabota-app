@@ -1,0 +1,16 @@
+{
+  "name": "АИС Забота - г. Кызыл",
+  "short_name": "Забота",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#1E3A8A",
+  "description": "Единый портал помощи волонтеров",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

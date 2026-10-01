@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}Новая заявка - АИС Забота{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-6 md:p-10 border-t-4 border-brand">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-4"><i class="fa-solid fa-file-pen text-brand mr-2"></i>Оформление заявки на помощь</h2>
+
+    <!-- Сообщение об успехе -->
+    <div id="successMessage" class="hidden bg-success text-white p-6 rounded-xl mb-6 text-center">
+        <i class="fa-solid fa-circle-check text-4xl mb-2"></i>
+        <h3 class="text-xl font-bold">Заявка успешно принята!</h3>
+        <p class="mt-2">Ваш уникальный номер (UIN): <span id="displayUin" class="font-mono text-2xl font-bold bg-white text-success px-2 py-1 rounded"></span></p>
+        <p class="mt-2 text-sm">Сохраните этот номер, чтобы отслеживать статус.</p>
+        <a href="/" class="inline-block mt-4 bg-white text-success font-semibold px-6 py-2 rounded-lg">На главную</a>
+    </div>
+
+    <!-- Форма -->
+    <form id="requestForm" class="space-y-6">
+        
+        <div class="bg-blue-50 p-4 rounded-lg">
+            <label class="flex items-center space-x-3 cursor-pointer">
+                <input type="checkbox" id="isThirdParty" name="is_third_party" class="w-5 h-5 text-brand rounded focus:ring-brand">
+                <span class="font-medium text-gray-700">Я подаю заявку за другого человека (родственника / соседа)</span>
+            </label>
+        </div>
+
+        <div id="thirdPartyBlock" class="hidden space-y-4 border-l-4 border-brand pl-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Ваше ФИО (как представителя)</label>
+                <input type="text" name="third_party_info" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand outline-none">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">ФИО нуждающегося *</label>
+                <input type="text" name="applicant_name" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Контактный телефон *</label>
+                <input type="tel" name="phone" required placeholder="+7 (999) 000-00-00" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand outline-none">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Категория льготы *</label>
+                <select name="benefit_category" required class="w-full px-4 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-brand outline-none">
+                    <option value="">-- Выберите --</option>
+                    <option value="Пенсионер">Пенсионер</option>
+                    <option value="Инвалид 1/2 группы">Инвалид 1/2 группы</option>
+                    <option value="Ветеран ВОВ/Труда">Ветеран ВОВ / Труда</option>
+                    <option value="Семья участника СВО">Семья участника СВО</option>
+                    <option value="Многодетная семья">Многодетная семья</option>
+                    <option value="Одинокий родитель">Одинокий родитель</option>
+                    <option value="Нет льгот">Нет льгот (тяжелая жизненная ситуация)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Район г. Кызыла *</label>
+                <select id="districtSelect" name="district_id" required class="w-full px-4 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-brand outline-none">
+                    <option value="">-- Выберите район --</option>
+                    {% for dist in districts %}
+                    <option value="{{ dist.id }}">{{ dist.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Поле для своего Района (Скрыто по умолчанию) -->
+        <div id="customDistrictBlock" class="hidden bg-gray-50 p-4 border border-gray-200 rounded-lg">
+            <label class="block text-sm font-bold text-brand mb-1">Укажите ваш район вручную *</label>
+            <input type="text" id="customDistrictInput" name="custom_district" placeholder="Например: СНТ Дар" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand outline-none">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Точный адрес (Улица, дом, кв.) *</label>
+            <input type="text" name="address" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand outline-none">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Какая помощь требуется? *</label>
+            <select id="categorySelect" name="category_id" required class="w-full px-4 py-2 border rounded-lg bg-white focus:ring-2 focus:ring-brand outline-none">
+                <option value="">-- Выберите вид помощи --</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}">{{ cat.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Поле для своей Категории (Скрыто по умолчанию) -->
+        <div id="customCategoryBlock" class="hidden bg-gray-50 p-4 border border-gray-200 rounded-lg">
+            <label class="block text-sm font-bold text-brand mb-1">Кратко назовите вид помощи *</label>
+            <input type="text" id="customCategoryInput" name="custom_category" placeholder="Например: Выгулять собаку" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand outline-none">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Подробное описание задачи *</label>
+            <textarea name="description" rows="3" required placeholder="Опишите, что именно нужно сделать..." class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand outline-none"></textarea>
+            
+            <div class="mt-3 bg-gray-50 border border-gray-200 p-4 rounded-lg flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="text-sm text-gray-600">
+                    <i class="fa-solid fa-microphone text-brand mr-2"></i>Голосовое сообщение:
+                </div>
+                <div class="flex items-center gap-3">
+                    <button type="button" id="recordBtn" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg font-medium transition text-sm flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-red-500 hidden" id="recordIndicator"></span>
+                        <span id="recordText">Начать запись</span>
+                    </button>
+                    <audio id="audioPlayback" controls class="hidden h-10"></audio>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-red-50 border border-red-200 p-4 rounded-lg">
+            <label class="flex items-center space-x-3 cursor-pointer">
+                <input type="checkbox" name="is_emergency" class="w-5 h-5 text-red-600 rounded focus:ring-red-500">
+                <span class="font-bold text-red-700">Экстренная ситуационная помощь (SOS)</span>
+            </label>
+        </div>
+
+        <button type="submit" id="submitBtn" class="w-full bg-brand text-white font-bold text-lg py-4 rounded-xl shadow hover:bg-blue-800 transition">
+            Отправить заявку
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 1. Логика переключателя "За соседа"
+    const isThirdPartyCb = document.getElementById('isThirdParty');
+    const thirdPartyBlock = document.getElementById('thirdPartyBlock');
+    isThirdPartyCb.addEventListener('change', (e) => {
+        thirdPartyBlock.classList.toggle('hidden', !e.target.checked);
+    });
+
+    // 2. Умные поля "Другое"
+    const districtSelect = document.getElementById('districtSelect');
+    const customDistrictBlock = document.getElementById('customDistrictBlock');
+    const customDistrictInput = document.getElementById('customDistrictInput');
+
+    districtSelect.addEventListener('change', function() {
+        const selectedText = this.options[this.selectedIndex].text;
+        if (selectedText.includes('Другое')) {
+            customDistrictBlock.classList.remove('hidden');
+            customDistrictInput.setAttribute('required', 'true');
+        } else {
+            customDistrictBlock.classList.add('hidden');
+            customDistrictInput.removeAttribute('required');
+            customDistrictInput.value = '';
+        }
+    });
+
+    const categorySelect = document.getElementById('categorySelect');
+    const customCategoryBlock = document.getElementById('customCategoryBlock');
+    const customCategoryInput = document.getElementById('customCategoryInput');
+
+    categorySelect.addEventListener('change', function() {
+        const selectedText = this.options[this.selectedIndex].text;
+        if (selectedText.includes('Другое')) {
+            customCategoryBlock.classList.remove('hidden');
+            customCategoryInput.setAttribute('required', 'true');
+        } else {
+            customCategoryBlock.classList.add('hidden');
+            customCategoryInput.removeAttribute('required');
+            customCategoryInput.value = '';
+        }
+    });
+
+    // 3. Запись аудио
+    let mediaRecorder, audioChunks = [], audioBlob = null, isRecording = false;
+    const recordBtn = document.getElementById('recordBtn'), recordText = document.getElementById('recordText');
+    const recordIndicator = document.getElementById('recordIndicator'), audioPlayback = document.getElementById('audioPlayback');
+
+    recordBtn.addEventListener('click', async () => {
+        if (!isRecording) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = () => {
+                    audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    audioChunks = [];
+                    audioPlayback.src = URL.createObjectURL(audioBlob);
+                    audioPlayback.classList.remove('hidden');
+                };
+                mediaRecorder.start();
+                isRecording = true;
+                recordText.innerText = "Остановить";
+                recordIndicator.classList.remove('hidden');
+                recordIndicator.classList.add('animate-pulse');
+                audioPlayback.classList.add('hidden');
+            } catch (err) { alert("Нет доступа к микрофону"); }
+        } else {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            isRecording = false;
+            recordText.innerText = "Перезаписать";
+            recordIndicator.classList.add('hidden');
+            recordIndicator.classList.remove('animate-pulse');
+        }
+    });
+
+    // 4. Отправка формы
+    const form = document.getElementById('requestForm');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Отправка...";
+
+        const formData = new FormData(form);
+        if(!isThirdPartyCb.checked) formData.delete('is_third_party');
+        else formData.set('is_third_party', 'true');
+        if (audioBlob) formData.append('audio', audioBlob, 'record.webm');
+
+        try {
+            const response = await fetch('/request/new', { method: 'POST', body: formData });
+            const result = await response.json();
+            if(result.status === 'success') {
+                form.classList.add('hidden');
+                document.getElementById('successMessage').classList.remove('hidden');
+                document.getElementById('displayUin').innerText = result.uin;
+                window.scrollTo(0,0);
+            }
+        } catch (error) {
+            alert('Ошибка при отправке заявки.');
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Отправить заявку";
+        }
+    });
+</script>
+{% endblock %}

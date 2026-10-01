@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Чат по задаче - АИС Забота{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <a href="/admin/dashboard" class="text-brand hover:underline font-medium mb-4 inline-block">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Назад к Канбану
+    </a>
+
+    <div class="bg-white rounded-xl shadow-lg border-t-4 border-brand overflow-hidden flex flex-col h-[600px]">
+        
+        <div class="bg-gray-50 p-4 border-b flex justify-between items-center">
+            <div>
+                <h2 class="font-bold text-gray-800">Чат по заявке {{ app.uin }}</h2>
+                <p class="text-xs text-gray-500"><i class="fa-solid fa-location-dot mr-1"></i>{{ app.address }}</p>
+            </div>
+            <span class="bg-brand text-white text-xs px-2 py-1 rounded shadow-sm">В работе</span>
+        </div>
+
+        <div id="chatBox" class="flex-grow p-6 overflow-y-auto bg-gray-100 flex flex-col gap-4"></div>
+        
+        <div class="p-4 bg-white border-t flex gap-3">
+            <input type="text" id="chatInput" placeholder="Ответить волонтеру..." class="flex-grow px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand outline-none transition" onkeypress="if(event.key === 'Enter') sendMessage()">
+            <button onclick="sendMessage()" class="bg-brand text-white px-6 py-3 rounded-lg hover:bg-blue-800 transition font-bold shadow">
+                Отправить
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadChat() {
+        const response = await fetch(`/api/chat/{{ app.id }}`);
+        const messages = await response.json();
+        const chatBox = document.getElementById('chatBox');
+        const isScrolledToBottom = chatBox.scrollHeight - chatBox.clientHeight <= chatBox.scrollTop + 1;
+        
+        chatBox.innerHTML = '';
+        messages.forEach(m => {
+            const isMe = m.sender === "{{ user.full_name }}";
+            const align = isMe ? 'items-end' : 'items-start';
+            const bg = isMe ? 'bg-brand text-white rounded-br-none' : 'bg-white text-gray-800 shadow-sm border border-gray-200 rounded-bl-none';
+            const senderName = isMe ? 'Вы (Инспектор)' : m.sender;
+            
+            chatBox.innerHTML += `
+                <div class="flex flex-col ${align} w-full">
+                    <span class="text-xs text-gray-500 ml-1 mr-1 mb-1">${senderName} • ${m.time}</span>
+                    <div class="px-4 py-2 rounded-xl text-[15px] max-w-[80%] ${bg}">
+                        ${m.message}
+                    </div>
+                </div>
+            `;
+        });
+        
+        if (isScrolledToBottom) chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('chatInput');
+        if(!input.value.trim()) return;
+        await fetch(`/api/chat/{{ app.id }}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({message: input.value})
+        });
+        input.value = '';
+        loadChat();
+    }
+
+    setInterval(loadChat, 3000);
+    loadChat();
+</script>
+{% endblock %}

@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Выполнение задачи - АИС Забота{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    
+    <a href="/volunteer/feed" class="text-brand hover:underline mb-4 inline-block font-medium">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Вернуться в ленту
+    </a>
+
+    <div class="bg-white rounded-xl shadow-lg border-t-4 border-brand overflow-hidden">
+        
+        <!-- Шапка задачи -->
+        <div class="bg-blue-50 p-6 border-b border-blue-100 flex justify-between items-center flex-wrap gap-4">
+            <div>
+                <span class="text-xs font-mono font-bold bg-white text-brand px-2 py-1 rounded shadow-sm border border-blue-200">UIN: {{ app.uin }}</span>
+                <h2 class="text-2xl font-bold text-gray-800 mt-2">{{ app.category.title }}</h2>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="inline-block bg-brand text-white px-3 py-2 rounded-lg text-sm font-bold shadow">
+                    В работе
+                </span>
+                <button onclick="triggerSOS()" class="bg-danger hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center gap-2 transition hover:scale-105" title="Нажмите в случае угрозы жизни или здоровью">
+                    <i class="fa-solid fa-triangle-exclamation text-lg animate-pulse"></i> SOS
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Левая колонка: Детали заявки -->
+            <div class="space-y-6">
+                <div>
+                    <h4 class="text-xs uppercase text-gray-400 font-bold tracking-wide mb-1">Заявитель</h4>
+                    <p class="text-lg font-medium text-gray-800"><i class="fa-solid fa-user text-gray-400 mr-2"></i>{{ app.applicant_name }}</p>
+                    <p class="text-brand font-bold mt-1"><i class="fa-solid fa-phone mr-2"></i>{{ app.phone }}</p>
+                    <p class="text-sm text-gray-500 mt-1">Льгота: {{ app.benefit_category }}</p>
+                </div>
+
+                <div>
+                    <h4 class="text-xs uppercase text-gray-400 font-bold tracking-wide mb-1">Точный адрес</h4>
+                    <p class="text-gray-800"><i class="fa-solid fa-map-location-dot text-brand mr-2"></i><b>{{ app.district.name }}</b>, {{ app.address }}</p>
+                </div>
+
+                <div>
+                    <h4 class="text-xs uppercase text-gray-400 font-bold tracking-wide mb-1">Что нужно сделать</h4>
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 text-gray-700 italic">
+                        "{{ app.description }}"
+                    </div>
+                </div>
+
+                {% if app.audio_url %}
+                <div>
+                    <h4 class="text-xs uppercase text-gray-400 font-bold tracking-wide mb-1">Голосовое сообщение</h4>
+                    <audio controls src="{{ app.audio_url }}" class="w-full h-10"></audio>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Правая колонка: Отчет и Чат -->
+            <div class="flex flex-col gap-6">
+                
+                <!-- Блок Чата с Инспектором -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[350px]">
+                    <div class="bg-blue-50 p-3 border-b border-blue-100 font-bold text-gray-700 flex items-center gap-2 rounded-t-xl">
+                        <i class="fa-solid fa-headset text-brand"></i> Связь с Инспектором
+                    </div>
+                    
+                    <div id="chatBox" class="flex-grow p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3">
+                        <!-- Сообщения загружаются через JS -->
+                    </div>
+                    
+                    <div class="p-3 border-t border-gray-200 bg-white rounded-b-xl flex gap-2">
+                        <input type="text" id="chatInput" placeholder="Написать сообщение..." class="flex-grow px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand outline-none text-sm" onkeypress="if(event.key === 'Enter') sendMessage()">
+                        <button onclick="sendMessage()" class="bg-brand text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition shadow">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Блок Фотоотчета -->
+                <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2"><i class="fa-solid fa-camera text-brand mr-2"></i>Фотоотчет</h3>
+                    
+                    <div id="reportSuccess" class="hidden text-center py-4">
+                        <i class="fa-solid fa-circle-check text-4xl text-success mb-2"></i>
+                        <h3 class="font-bold text-gray-800">Отчет отправлен!</h3>
+                        <a href="/volunteer/feed" class="mt-4 inline-block bg-gray-200 text-gray-800 font-bold py-2 px-6 rounded hover:bg-gray-300 transition">В ленту</a>
+                    </div>
+
+                    <form id="reportForm" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Фотография "ДО" (необязательно)</label>
+                            <input type="file" name="photo_before" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-50 file:text-brand hover:file:bg-blue-100 transition">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Фотография "ПОСЛЕ" (обязательно)</label>
+                            <input type="file" name="photo_after" accept="image/*" required class="w-full text-xs text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-success file:text-white hover:file:bg-emerald-600 transition">
+                        </div>
+
+                        <!-- НОВОЕ: Скрытый рейтинг жителя -->
+                        <div class="bg-gray-100 p-3 rounded border border-gray-200">
+                            <label class="block text-xs font-bold text-gray-700 mb-1" title="Эта информация будет доступна только инспекторам"><i class="fa-solid fa-user-shield text-brand mr-1"></i>Оцените адекватность заявителя (Скрыто)</label>
+                            <select name="resident_behavior_rating" required class="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-brand outline-none text-sm bg-white">
+                                <option value="5">⭐⭐⭐⭐⭐ Отличный, вежливый человек</option>
+                                <option value="4">⭐⭐⭐⭐ Нормально, без проблем</option>
+                                <option value="3">⭐⭐⭐ Странный, но терпимо</option>
+                                <option value="2">⭐⭐ Сложный характер, придирки</option>
+                                <option value="1">⭐ Опасно / Неадекватно / Агрессия</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <textarea name="volunteer_comment" rows="2" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand outline-none text-sm" placeholder="Ваш комментарий к отчету..."></textarea>
+                        </div>
+
+                        <button type="submit" id="submitBtn" class="w-full bg-success text-white font-bold py-2 rounded-lg shadow hover:bg-emerald-600 transition">
+                            Отправить инспектору
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 1. Отправка фотоотчета
+    const form = document.getElementById('reportForm');
+    const successBlock = document.getElementById('reportSuccess');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Отправка...";
+
+        const formData = new FormData(form);
+        const appId = {{ app.id }};
+
+        try {
+            const response = await fetch(`/volunteer/api/task/${appId}/report`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                form.classList.add('hidden');
+                successBlock.classList.remove('hidden');
+            } else {
+                alert('Ошибка: ' + result.message);
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Отправить инспектору";
+            }
+        } catch (error) {
+            alert('Сетевая ошибка при отправке отчета.');
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Отправить инспектору";
+        }
+    });
+
+    // 2. Логика Чата (Long Polling)
+    async function loadChat() {
+        const response = await fetch(`/api/chat/{{ app.id }}`);
+        const messages = await response.json();
+        const chatBox = document.getElementById('chatBox');
+        
+        const isScrolledToBottom = chatBox.scrollHeight - chatBox.clientHeight <= chatBox.scrollTop + 1;
+        
+        chatBox.innerHTML = '';
+        messages.forEach(m => {
+            const isMe = m.sender === "{{ user.full_name }}";
+            const align = isMe ? 'items-end' : 'items-start';
+            const bg = isMe ? 'bg-brand text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none';
+            const senderName = isMe ? 'Вы' : (m.role === 'inspector' ? 'Инспектор' : m.sender);
+            
+            chatBox.innerHTML += `
+                <div class="flex flex-col ${align} w-full">
+                    <span class="text-[10px] text-gray-500 ml-1 mr-1 mb-0.5">${senderName} • ${m.time}</span>
+                    <div class="px-3 py-2 rounded-xl text-sm shadow-sm max-w-[85%] ${bg}">
+                        ${m.message}
+                    </div>
+                </div>
+            `;
+        });
+        
+        if (isScrolledToBottom) {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('chatInput');
+        if(!input.value.trim()) return;
+        
+        await fetch(`/api/chat/{{ app.id }}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({message: input.value})
+        });
+        input.value = '';
+        loadChat();
+    }
+
+    setInterval(loadChat, 3000);
+    loadChat();
+
+// Логика кнопки SOS
+    async function triggerSOS() {
+        if(confirm("ВНИМАНИЕ! Вы собираетесь отправить экстренный сигнал SOS инспектору. Используйте только при реальной угрозе (агрессия, опасные животные и т.д.). Продолжить?")) {
+            try {
+                await fetch(`/volunteer/api/task/{{ app.id }}/sos`, { method: 'POST' });
+                alert("Сигнал SOS отправлен! Инспекторы уже получили уведомление. Постарайтесь покинуть опасную зону.");
+                loadChat(); // Сразу подгружаем красное сообщение в чат
+            } catch (err) {
+                alert("Сетевая ошибка при отправке SOS!");
+            }
+        }
+    }
+</script>
+{% endblock %}
